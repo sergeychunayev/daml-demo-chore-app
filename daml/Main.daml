@@ -1,0 +1,75 @@
+module Main where
+
+import Daml.Script
+
+type WorkProposalId = ContractId WorkProposal
+type WorkContractId = ContractId WorkContract
+
+template WorkProposal
+  with
+    employee: Party
+    employer: Party
+    description: Text
+    price: Int
+    remote: Bool
+    note: Text
+  where
+    ensure price > 0
+    signatory employee
+    controller employee can
+      Create : WorkProposalId
+        do
+          create this
+      Modify : WorkProposalId
+        with
+          revision: Text
+          feedback: Text
+          newPrice: Int
+        do
+          create this with
+            description = revision
+            note = feedback
+            price = newPrice
+    controller employer can
+      Reject : WorkProposalId
+        with
+          feedback: Text
+        do
+          create this with
+            note = feedback
+      Accept : WorkContractId
+        do
+          create WorkContract with
+            proposal = this
+
+template WorkContract
+  with
+    proposal: WorkProposal
+  where
+    signatory [proposal.employee, proposal.employer]
+
+setup = do
+  employee0 <- allocateParty "Employee_0"
+  employer0 <- allocateParty "Employer_0"
+
+  proposal0 <- submit employee0 do
+    createCmd WorkProposal with
+      employee = employee0
+      employer = employer0
+      description = "Garbage collection"
+      note = "Will work for food"
+      remote = True
+      price = 1_000_000_000
+
+  proposal0_reject <- submit employer0 do
+    exerciseCmd proposal0 Reject with
+      feedback = "Too expensive"
+
+  proposal0_1 <- submit employee0 do
+    exerciseCmd proposal0_reject Modify with
+      revision = "Garbage collection"
+      feedback = "Discount"
+      newPrice = 999_999_999
+
+  submit employer0 do
+    exerciseCmd proposal0_1 Accept

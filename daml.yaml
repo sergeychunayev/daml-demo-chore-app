@@ -1,0 +1,14 @@
+sdk-version: 1.18.1
+name: ChoreApp
+source: daml
+init-script: Main:setup
+parties:
+  - Employee_0
+  - Employer_0
+version: 0.0.1
+dependencies:
+  - daml-prim
+  - daml-stdlib
+  - daml-script
+sandbox-options:
+  - --wall-clock-time
